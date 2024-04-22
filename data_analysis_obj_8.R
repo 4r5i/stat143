@@ -9,6 +9,7 @@ library(cluster)
 library(tidyr)
 library(dplyr)
 library(NbClust)
+library(ggplot2)
 
 # Setting the working directory
 setwd(dirname(getSourceEditorContext()$path))
@@ -112,3 +113,19 @@ cluster_sill <- df_cluster %>%
     silhouette = example_sil[,3]
   ) %>% group_by(clust) %>% 
   summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Clusters 2, 3, and 6 (<0.1 Ave Sil Width)
+# Outlying observations
+pc_final <- prcomp(x = df_cluster, scale. = T)
+summary(pc_final)
+
+options(ggrepel.max.overlaps = Inf)
+df_cluster %>%
+  mutate(cluster = ward_clust7,
+         q_code = df$q_code,
+         tag = ifelse(cluster %in% c(2, 3, 6), q_code, NA)) %>%
+  bind_cols(as_tibble(pc_final$x)) %>%
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point(col = "firebrick") +
+  ggrepel::geom_label_repel(aes(label = tag))
+
