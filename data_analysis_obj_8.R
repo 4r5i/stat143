@@ -185,3 +185,17 @@ cluster_sil4 <- df_cluster %>%
 # Visualizing Average Silhouette Widths per Cluster
 fviz_silhouette(example_sil4)
 
+########################################
+##### Outlier Detection ################
+########################################
+pc_final <- prcomp(x = df_cluster, scale. = T)
+summary(pc_final)
+
+options(ggrepel.max.overlaps = Inf)
+df_cluster %>%
+  mutate(cluster = ward_clust6,
+         tag = ifelse(cluster %in% c(6), mun_HVI, NA)) %>%
+  bind_cols(as_tibble(pc_final$x)) %>%
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point(col = "firebrick") +
+  ggrepel::geom_label_repel(aes(label = tag))
