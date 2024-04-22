@@ -102,3 +102,13 @@ best_tr <- NbClust(data = scale(df_cluster),
                    index = "trcovw")
 best_tr$All.index[1:9] - best_tr$All.index[2:10]
 # max tr = 2
+
+
+# Silhouette Widths
+example_sil <- silhouette(ward_clust7, daisy(x = df_cluster, metric = "euclidean", stand = T))
+cluster_sill <- df_cluster %>%
+  mutate(
+    clust = ward_clust7,
+    silhouette = example_sil[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
