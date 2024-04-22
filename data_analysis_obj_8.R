@@ -137,6 +137,9 @@ fviz_silhouette(example_sil2)
 ##### Non - Hierarchical Clustering ####
 ########################################
 
+c("kmeans" = kmeans_stats$avg.silwidth, "hclust" = hclust_stats$avg.silwidth)
+c("kmeans" = kmeans_stats$ch, "hclust" = hclust_stats$ch)
+
 # Initial centers from AGNES (Euclidean, Ward's Linkage) k = 7
 init_centers1 <- df_cluster %>%
   mutate_all(.funs = scale) %>%
@@ -185,6 +188,18 @@ cluster_sil4 <- df_cluster %>%
 # Visualizing Average Silhouette Widths per Cluster
 fviz_silhouette(example_sil4)
 
+
+########################################
+##### Outlier Detection ################
+########################################
+
+pam_results <- pam(df_cluster, k = 3, metric = "euclidean", stand = TRUE)
+fviz_silhouette(pam_results, palette = "jco", ggtheme = theme_classic())
+
+clara_results <- clara(df_cluster, k = 6, metric = "euclidean", stand = TRUE)
+fviz_silhouette(clara_results, palette = "jco", ggtheme = theme_classic())
+
+
 ########################################
 ##### Outlier Detection ################
 ########################################
@@ -193,9 +208,263 @@ summary(pc_final)
 
 options(ggrepel.max.overlaps = Inf)
 df_cluster %>%
-  mutate(cluster = ward_clust6,
-         tag = ifelse(cluster %in% c(6), mun_HVI, NA)) %>%
+  mutate(cluster = ward_clust7,
+         q_code = df$q_code,
+         tag = ifelse(cluster %in% c(3), q_code, NA)) %>%
   bind_cols(as_tibble(pc_final$x)) %>%
   ggplot(aes(x = PC1, y = PC2)) +
   geom_point(col = "firebrick") +
   ggrepel::geom_label_repel(aes(label = tag))
+
+
+################################################################################
+####################### Individual Cluster Analyses ############################
+################################################################################
+
+####################### Attitude Factors ############################
+df_cluster_att <- df %>% select(attitude_f1, attitude_f2, attitude_f3)
+
+##################################
+##### Hierarchical Clustering ####
+##################################
+
+# Euclidean Single Linkage
+euc_dist <- cluster::daisy(x = df_cluster_att, metric = "euclidean") 
+agnes_single_euc <- cluster::agnes(x = euc_dist, diss = T, method = "single")
+plot(agnes_single_euc, which.plots = 2)
+
+# Euclidean Complete Linkage
+agnes_comp_euc <- cluster::agnes(x = df_cluster_att, metric = "euclidean", diss = F, method = "complete") 
+plot(agnes_comp_euc, which.plots = 2)
+
+# Euclidean Average Linkage
+agnes_avg_euc <- cluster::agnes(x = df_cluster_att, metric = "euclidean", diss = F, method = "average") 
+plot(agnes_avg_euc, which.plots = 2)
+
+# Ward's Linkage
+agnes_ward <- cluster::agnes(x = df_cluster_att, diss = F, method = "ward") 
+plot(agnes_ward, which.plots = 2)
+
+# Best Number of Clusters
+best_ch <- NbClust(data = scale(df_cluster_att),
+                   distance = "euclidean",
+                   min.nc = 2,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "ch")
+best_ch$All.index
+# max ch = 10
+best_sil <- NbClust(data = scale(df_cluster_att),
+                    distance = "euclidean",
+                    min.nc = 2,
+                    max.nc = 10,
+                    method = "ward.D",
+                    index = "silhouette")
+best_sil$All.index
+# max sil = 4
+best_db <- NbClust(data = scale(df_cluster_att),
+                   distance = "euclidean",
+                   min.nc = 2,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "db")
+best_db$All.index
+# min db = 10
+best_rat <- NbClust(data = scale(df_cluster_att),
+                    distance = "euclidean",
+                    min.nc = 2,
+                    max.nc = 10,
+                    method = "ward.D",
+                    index = "ratkowsky")
+best_rat$All.index
+# max rat = 4
+best_ccc <- NbClust(data = scale(df_cluster_att),
+                    distance = "euclidean",
+                    min.nc = 2,
+                    max.nc = 10,
+                    method = "ward.D",
+                    index = "ccc")
+best_ccc$All.index
+# max ccc = 2
+best_fm <- NbClust(data = scale(df_cluster_att),
+                   distance = "euclidean",
+                   min.nc = 1,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "friedman")
+best_fm$All.index[2:10] - best_fm$All.index[1:9]
+#max fm = 10
+best_tr <- NbClust(data = scale(df_cluster_att),
+                   distance = "euclidean",
+                   min.nc = 1,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "trcovw")
+best_tr$All.index[1:9] - best_tr$All.index[2:10]
+# max tr = 3
+
+ward_clust5 <- cutree(tree = agnes_ward, k = 5) 
+table(ward_clust5)
+
+# Initial centers from AGNES (Euclidean, Ward's Linkage) k = 5
+init_centers <- df_cluster_att %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = ward_clust5) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>%
+  select(-clust)
+
+kmeans <- kmeans(x = scale(df_cluster_att), centers = init_centers)
+table(kmeans$cluster)
+
+# Silhouette Widths of K-Means solution, k = 5
+example_sil <- silhouette(kmeans$cluster, daisy(x = df_cluster_att, metric = "euclidean", stand = T))
+cluster_sil <- df_cluster %>%
+  mutate(cluster = ward_clust5) %>% 
+  mutate(
+    clust = kmeans1$cluster,
+    silhouette = example_sil[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil) # ave sil width = 0.28
+
+# Centers of K-Means Algorithm
+df_cluster_att %>%
+  mutate_all(.funs = scale) %>%
+  mutate(kmeans = kmeans$cluster) %>%
+  group_by(kmeans) %>%
+  summarise_all(.funs = mean) %>%
+  pivot_longer(c(attitude_f1, attitude_f2, attitude_f3), names_to = "vars", values_to = "mean") %>%
+  mutate(tag = factor(mean < 0, labels = c("average and up", "below average"))) %>%
+  ggplot(aes(x = vars, y = mean)) +
+  geom_bar(aes(fill = tag), stat = "identity", position = "dodge") +
+  facet_wrap(. ~ kmeans) +
+  coord_flip() +
+  ylim(-2,2) +
+  ggthemes::theme_gdocs()
+
+####################### Opinion Factors ############################
+df_cluster_opp <- df %>% select(opinion_f1, opinion_f2, opinion_f3, opinion_f4)
+
+##################################
+##### Hierarchical Clustering ####
+##################################
+
+# Euclidean Single Linkage
+euc_dist <- cluster::daisy(x = df_cluster_opp, metric = "euclidean") 
+agnes_single_euc <- cluster::agnes(x = euc_dist, diss = T, method = "single")
+plot(agnes_single_euc, which.plots = 2)
+
+# Euclidean Complete Linkage
+agnes_comp_euc <- cluster::agnes(x = df_cluster_opp, metric = "euclidean", diss = F, method = "complete") 
+plot(agnes_comp_euc, which.plots = 2)
+
+# Euclidean Average Linkage
+agnes_avg_euc <- cluster::agnes(x = df_cluster_opp, metric = "euclidean", diss = F, method = "average") 
+plot(agnes_avg_euc, which.plots = 2)
+
+# Ward's Linkage
+agnes_ward <- cluster::agnes(x = df_cluster_opp, diss = F, method = "ward") 
+plot(agnes_ward, which.plots = 2)
+
+# Best Number of Clusters
+best_ch <- NbClust(data = scale(df_cluster_opp),
+                   distance = "euclidean",
+                   min.nc = 2,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "ch")
+best_ch$All.index
+# max ch = 3
+best_sil <- NbClust(data = scale(df_cluster_opp),
+                    distance = "euclidean",
+                    min.nc = 2,
+                    max.nc = 10,
+                    method = "ward.D",
+                    index = "silhouette")
+best_sil$All.index
+# max sil = 4
+best_db <- NbClust(data = scale(df_cluster_opp),
+                   distance = "euclidean",
+                   min.nc = 2,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "db")
+best_db$All.index
+# min db = 4
+best_rat <- NbClust(data = scale(df_cluster_opp),
+                    distance = "euclidean",
+                    min.nc = 2,
+                    max.nc = 10,
+                    method = "ward.D",
+                    index = "ratkowsky")
+best_rat$All.index
+# max rat = 4
+best_ccc <- NbClust(data = scale(df_cluster_opp),
+                    distance = "euclidean",
+                    min.nc = 2,
+                    max.nc = 10,
+                    method = "ward.D",
+                    index = "ccc")
+best_ccc$All.index
+# max ccc = 2
+best_fm <- NbClust(data = scale(df_cluster_opp),
+                   distance = "euclidean",
+                   min.nc = 1,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "friedman")
+best_fm$All.index[2:10] - best_fm$All.index[1:9]
+#max fm = 3
+best_tr <- NbClust(data = scale(df_cluster_opp),
+                   distance = "euclidean",
+                   min.nc = 1,
+                   max.nc = 10,
+                   method = "ward.D",
+                   index = "trcovw")
+best_tr$All.index[1:9] - best_tr$All.index[2:10]
+# max tr = 2
+
+ward_clust4 <- cutree(tree = agnes_ward, k = 4) 
+table(ward_clust4)
+
+# Initial centers from AGNES (Euclidean, Ward's Linkage) k = 4
+init_centers <- df_cluster_opp %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = ward_clust4) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>%
+  select(-clust)
+
+kmeans <- kmeans(x = scale(df_cluster_opp), centers = init_centers)
+table(kmeans$cluster)
+
+# Silhouette Widths of K-Means solution, k = 4
+example_sil <- silhouette(kmeans$cluster, daisy(x = df_cluster_opp, metric = "euclidean", stand = T))
+cluster_sil <- df_cluster %>%
+  mutate(cluster = ward_clust4) %>% 
+  mutate(
+    clust = kmeans1$cluster,
+    silhouette = example_sil[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil) # ave sil width = 0.22
+
+# Centers of K-Means Algorithm
+df_cluster_opp %>%
+  mutate_all(.funs = scale) %>%
+  mutate(kmeans = kmeans$cluster) %>%
+  group_by(kmeans) %>%
+  summarise_all(.funs = mean) %>%
+  pivot_longer(c(opinion_f1, opinion_f2, opinion_f3, opinion_f4), names_to = "vars", values_to = "mean") %>%
+  mutate(tag = factor(mean < 0, labels = c("average and up", "below average"))) %>%
+  ggplot(aes(x = vars, y = mean)) +
+  geom_bar(aes(fill = tag), stat = "identity", position = "dodge") +
+  facet_wrap(. ~ kmeans) +
+  coord_flip() +
+  ylim(-2,2) +
+  ggthemes::theme_gdocs()
