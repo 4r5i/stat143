@@ -10,6 +10,7 @@ library(tidyr)
 library(dplyr)
 library(NbClust)
 library(ggplot2)
+library(factoextra)
 
 # Setting the working directory
 setwd(dirname(getSourceEditorContext()$path))
@@ -44,6 +45,9 @@ plot(agnes_ward, which.plots = 2)
 
 ward_clust7 <- cutree(tree = agnes_ward, k = 7) 
 table(ward_clust7)
+
+ward_clust3 <- cutree(tree = agnes_ward, k = 3) 
+table(ward_clust3)
 
 
 # Best Number of Clusters
@@ -105,27 +109,79 @@ best_tr$All.index[1:9] - best_tr$All.index[2:10]
 # max tr = 2
 
 
-# Silhouette Widths
-example_sil <- silhouette(ward_clust7, daisy(x = df_cluster, metric = "euclidean", stand = T))
-cluster_sill <- df_cluster %>%
+# Silhouette Widths of AGNES solution (Euclidean, Ward's Linkage) k = 7
+example_sil1 <- silhouette(ward_clust7, daisy(x = df_cluster, metric = "euclidean", stand = T))
+cluster_sill1 <- df_cluster %>%
   mutate(
     clust = ward_clust7,
     silhouette = example_sil[,3]
   ) %>% group_by(clust) %>% 
   summarise_at(vars(silhouette), list(name = mean))
 
-# Visualizing Clusters 2, 3, and 6 (<0.1 Ave Sil Width)
-# Outlying observations
-pc_final <- prcomp(x = df_cluster, scale. = T)
-summary(pc_final)
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil1)
 
-options(ggrepel.max.overlaps = Inf)
-df_cluster %>%
-  mutate(cluster = ward_clust7,
-         q_code = df$q_code,
-         tag = ifelse(cluster %in% c(2, 3, 6), q_code, NA)) %>%
-  bind_cols(as_tibble(pc_final$x)) %>%
-  ggplot(aes(x = PC1, y = PC2)) +
-  geom_point(col = "firebrick") +
-  ggrepel::geom_label_repel(aes(label = tag))
+# Silhouette Widths of AGNES solution (Euclidean, Ward's Linkage) k = 3
+example_sil2 <- silhouette(ward_clust3, daisy(x = df_cluster, metric = "euclidean", stand = T))
+cluster_sil2 <- df_cluster %>%
+  mutate(
+    clust = ward_clust3,
+    silhouette = example_sil2[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil2)
+
+########################################
+##### Non - Hierarchical Clustering ####
+########################################
+
+# Initial centers from AGNES (Euclidean, Ward's Linkage) k = 7
+init_centers1 <- df_cluster %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = ward_clust7) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>%
+  select(-clust)
+
+kmeans1 <- kmeans(x = scale(df_cluster), centers = init_centers1)
+table(kmeans1$cluster)
+
+# Silhouette Widths of K-Means solution, k = 7
+example_sil3 <- silhouette(kmeans1$cluster, daisy(x = df_cluster, metric = "euclidean", stand = T))
+cluster_sil3 <- df_cluster %>%
+  mutate(cluster = ward_clust7) %>% 
+  mutate(
+    clust = kmeans1$cluster,
+    silhouette = example_sil3[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil3)
+
+# Initial centers from AGNES (Euclidean, Ward's Linkage) k = 3
+init_centers2 <- df_cluster %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = ward_clust3) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>%
+  select(-clust)
+
+kmeans2 <- kmeans(x = scale(df_cluster), centers = init_centers2)
+table(kmeans2$cluster)
+
+# Silhouette Widths of K-Means solution, k = 3
+example_sil4 <- silhouette(kmeans2$cluster, daisy(x = df_cluster, metric = "euclidean", stand = T))
+cluster_sil4 <- df_cluster %>%
+  mutate(cluster = ward_clust3) %>% 
+  mutate(
+    clust = kmeans1$cluster,
+    silhouette = example_sil4[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil4)
 
