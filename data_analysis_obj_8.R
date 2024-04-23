@@ -2,7 +2,6 @@
 ## for Stat 143 Survey Operations Project
 
 #install.packages("rstudioapi")
-
 library(rstudioapi)  
 library(readxl)
 library(cluster)
@@ -110,10 +109,10 @@ best_tr$All.index[1:9] - best_tr$All.index[2:10]
 
 # Silhouette Widths of AGNES solution (Euclidean, Ward's Linkage) k = 7
 example_sil1 <- silhouette(ward_clust7, daisy(x = df_cluster, metric = "euclidean", stand = T))
-cluster_sill1 <- df_cluster %>%
+cluster_sil1 <- df_cluster %>%
   mutate(
     clust = ward_clust7,
-    silhouette = example_sil[,3]
+    silhouette = example_sil1[,3]
   ) %>% group_by(clust) %>% 
   summarise_at(vars(silhouette), list(name = mean))
 
@@ -136,8 +135,7 @@ fviz_silhouette(example_sil2)
 ##### Non - Hierarchical Clustering ####
 ########################################
 
-c("kmeans" = kmeans_stats$avg.silwidth, "hclust" = hclust_stats$avg.silwidth)
-c("kmeans" = kmeans_stats$ch, "hclust" = hclust_stats$ch)
+
 
 # Initial centers from AGNES (Euclidean, Ward's Linkage) k = 7
 init_centers1 <- df_cluster %>%
@@ -189,7 +187,7 @@ fviz_silhouette(example_sil4)
 
 
 ########################################
-##### Outlier Detection ################
+##### PAM and CLARA ####################
 ########################################
 
 pam_results <- pam(df_cluster, k = 3, metric = "euclidean", stand = TRUE)
@@ -199,18 +197,73 @@ clara_results <- clara(df_cluster, k = 6, metric = "euclidean", stand = TRUE)
 fviz_silhouette(clara_results, palette = "jco", ggtheme = theme_classic())
 
 
-########################################
-##### Outlier Detection ################
-########################################
-pc_final <- prcomp(x = df_cluster, scale. = T)
-summary(pc_final)
+###################################################################
+##### Using PCA on Factor Scores before Clustering ################
+###################################################################
+prcomp <- prcomp(x = df_cluster, scale. = T)
+summary(prcomp)
+princomp <- princomp(x = df_cluster, cor = T)
+summary(princomp)
+
+# Kaiser Rule
+summary(prcomp)$sdev^2
+
+# Scree Plot
+tibble(eigenvalues = (prcomp$sdev)^2, PC = 1:7) %>%
+  ggplot(aes(y = eigenvalues, x = PC)) +
+  geom_point() +
+  geom_bar(stat = "identity", fill = "#FFE392") +
+  geom_line() +
+  scale_x_continuous(breaks = 1:7) +
+  ggthemes::theme_gdocs() 
+
+
+# PC Loading
+prcomp$rotation
+princomp$loadings
+
+# Clustering of PC of Attitude and Opinion Factors
+df_cluster_pc <- bind_cols(df_cluster, prcomp$x) %>% select(PC1, PC2, PC3, PC4, PC5)
+
+agnes_ward_pc <- cluster::agnes(x = df_cluster_pc, diss = F, method = "ward") 
+plot(agnes_ward_pc, which.plots = 2)
+
+ward_clust_pc <- cutree(tree = agnes_ward_pc, k = 4) 
+table(ward_clust_pc)
+
+init_centers_pc <- df_cluster_pc %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = ward_clust_pc) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>%
+  select(-clust)
+
+kmeans_pc <- kmeans(x = scale(df_cluster_pc), centers = init_centers_pc)
+table(kmeans_pc$cluster)
+
+# Silhouette Widths of K-Means solution, k = 4
+example_sil_pc <- silhouette(kmeans_pc$cluster, daisy(x = df_cluster_pc, metric = "euclidean", stand = T))
+cluster_sil3 <- df_cluster_pc %>%
+  mutate(cluster = ward_clust_pc) %>% 
+  mutate(
+    clust = kmeans_pc$cluster,
+    silhouette = example_sil_pc[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil_pc)
+
+
+
 
 options(ggrepel.max.overlaps = Inf)
 df_cluster %>%
   mutate(cluster = ward_clust7,
          q_code = df$q_code,
-         tag = ifelse(cluster %in% c(3), q_code, NA)) %>%
-  bind_cols(as_tibble(pc_final$x)) %>%
+         tag = ifelse(cluster %in% c(3), q_code, NA)
+         ) %>%
+  bind_cols(as_tibble(prcomp$x)) %>%
   ggplot(aes(x = PC1, y = PC2)) +
   geom_point(col = "firebrick") +
   ggrepel::geom_label_repel(aes(label = tag))
