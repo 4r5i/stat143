@@ -19,8 +19,7 @@ setwd(dirname(getSourceEditorContext()$path))
 df <- read_xlsx("socio_demog_and_factor_scores.xlsx")
 str(df)
 
-df_cluster <- df %>% select(attitude_f1, attitude_f2, attitude_f3, 
-                            opinion_f1, opinion_f2, opinion_f3, opinion_f4)
+df_cluster <- df %>% select(attitude_f1, attitude_f2, attitude_f3, opinion_f1, opinion_f2, opinion_f3, opinion_f4)
 
 ##################################
 ##### Hierarchical Clustering ####
@@ -316,6 +315,7 @@ init_centers <- df_cluster_att %>%
 
 kmeans <- kmeans(x = scale(df_cluster_att), centers = init_centers)
 table(kmeans$cluster)
+kmeans_att <- kmeans
 
 # Silhouette Widths of K-Means solution, k = 5
 example_sil <- silhouette(kmeans$cluster, daisy(x = df_cluster_att, metric = "euclidean", stand = T))
@@ -440,6 +440,7 @@ init_centers <- df_cluster_opp %>%
 
 kmeans <- kmeans(x = scale(df_cluster_opp), centers = init_centers)
 table(kmeans$cluster)
+kmeans_opp <- kmeans
 
 # Silhouette Widths of K-Means solution, k = 4
 example_sil <- silhouette(kmeans$cluster, daisy(x = df_cluster_opp, metric = "euclidean", stand = T))
@@ -468,3 +469,71 @@ df_cluster_opp %>%
   coord_flip() +
   ylim(-2,2) +
   ggthemes::theme_gdocs()
+
+##################### Cluster Analysis of Attitude and Opinion Clusters ########
+
+df_att_opp <- data.frame(att_cluster = as.factor(kmeans_att$cluster), 
+              opp_cluster = as.factor(kmeans_opp$cluster))
+
+gower.dist <- daisy(df_att_opp, metric = c("gower"))
+
+divisive.clust <- diana(as.matrix(gower.dist), diss = TRUE, keep.diss = TRUE)
+plot(divisive.clust, main = "Divisive")
+
+agnes_ward_att_opp <- cluster::agnes(x = gower.dist, diss = T, method = "ward")
+plot(agnes_ward_att_opp, which.plots = 2)
+aggl.clust.c <- hclust(gower.dist, method = "complete")
+plot(aggl.clust.c,
+     main = "Agglomerative, complete linkages")
+
+pam_results <- pam(gower.dist, k = 4, diss = T)
+fviz_silhouette(pam_results, palette = "jco", ggtheme = theme_classic())
+
+library(fpc)
+cstats.table <- function(dist, tree, k) {
+  clust.assess <- c("cluster.number","n","within.cluster.ss","average.within","average.between",
+                    "wb.ratio","dunn2","avg.silwidth")
+  clust.size <- c("cluster.size")
+  stats.names <- c()
+  row.clust <- c()
+  output.stats <- matrix(ncol = k, nrow = length(clust.assess))
+  cluster.sizes <- matrix(ncol = k, nrow = k)
+  for(i in c(1:k)){
+    row.clust[i] <- paste("Cluster-", i, " size")
+  }
+  for(i in c(2:k)){
+    stats.names[i] <- paste("Test", i-1)
+    
+    for(j in seq_along(clust.assess)){
+      output.stats[j, i] <- unlist(cluster.stats(d = dist, clustering = cutree(tree, k = i))[clust.assess])[j]
+      
+    }
+    
+    for(d in 1:k) {
+      cluster.sizes[d, i] <- unlist(cluster.stats(d = dist, clustering = cutree(tree, k = i))[clust.size])[d]
+      dim(cluster.sizes[d, i]) <- c(length(cluster.sizes[i]), 1)
+      cluster.sizes[d, i]
+      
+    }
+  }
+  output.stats.df <- data.frame(output.stats)
+  cluster.sizes <- data.frame(cluster.sizes)
+  cluster.sizes[is.na(cluster.sizes)] <- 0
+  rows.all <- c(clust.assess, row.clust)
+  # rownames(output.stats.df) <- clust.assess
+  output <- rbind(output.stats.df, cluster.sizes)[ ,-1]
+  colnames(output) <- stats.names[2:k]
+  rownames(output) <- rows.all
+  is.num <- sapply(output, is.numeric)
+  output[is.num] <- lapply(output[is.num], round, 2)
+  output
+}
+
+
+stats.df.divisive <- cstats.table(gower.dist, divisive.clust, 8)
+stats.df.divisive
+
+
+install.packages("klaR")
+library(klaR)
+kmodes(df_att_opp, 4)
