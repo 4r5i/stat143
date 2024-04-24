@@ -275,6 +275,7 @@ cluster_sil_pc <- df_cluster_pc %>%
 fviz_silhouette(example_sil_pc)
 
 
+# Outlier Detection
 dist_from_center  <- mahalanobis(x = (df_cluster_pc %>% select(PC1, PC2)), 
                                  center = c(0,0), 
                                  cov = var((df_cluster_pc %>% select(PC1, PC2))))  
