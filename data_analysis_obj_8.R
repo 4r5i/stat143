@@ -245,8 +245,11 @@ df_cluster_pc <- bind_cols(df_cluster, prcomp$x) %>% select(PC1, PC2, PC3, PC4)
 agnes_ward_pc <- cluster::agnes(x = df_cluster_pc, diss = F, method = "ward") 
 plot(agnes_ward_pc, which.plots = 2)
 
-ward_clust_pc <- cutree(tree = agnes_ward_pc, k = 4) 
-table(ward_clust_pc)
+fviz_silhouette(silhouette(cutree(tree = agnes_ward_pc, k = 4), 
+                           daisy(x = df_cluster_pc, 
+                                 metric = "euclidean", 
+                                 stand = T)))
+ward_clust_pc <- cutree(tree = agnes_ward_pc, k = 4)
 
 init_centers_pc <- df_cluster_pc %>%
   mutate_all(.funs = scale) %>%
@@ -272,6 +275,16 @@ cluster_sil_pc <- df_cluster_pc %>%
 fviz_silhouette(example_sil_pc)
 
 
+dist_from_center  <- mahalanobis(x = (df_cluster_pc %>% select(PC1, PC2)), 
+                                 center = c(0,0), 
+                                 cov = var((df_cluster_pc %>% select(PC1, PC2))))  
+df_cluster_pc %>% 
+  mutate(id = df$q_code,         
+        dist = dist_from_center, 
+        tag = if_else(dist > (mean(dist_from_center)+2*sqrt(var(dist_from_center))), "might be outlier", "ok")) %>%   
+  ggplot(aes(x = PC1, y = PC2)) +   
+  geom_text(aes(label = id, col = tag)) +   
+  ggthemes::theme_gdocs() 
 
 
 options(ggrepel.max.overlaps = Inf)
