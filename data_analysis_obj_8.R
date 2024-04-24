@@ -222,7 +222,7 @@ tibble(eigenvalues = (prcomp$sdev)^2, PC = 1:7) %>%
 prcomp$rotation
 princomp$loadings
 
-# Clustering of PC of Attitude and Opinion Factors
+# Clustering of PC of Attitude and Opinion Factorsz
 df_cluster_pc <- bind_cols(df_cluster, prcomp$x) %>% select(PC1, PC2, PC3, PC4, PC5)
 
 agnes_ward_pc <- cluster::agnes(x = df_cluster_pc, diss = F, method = "ward") 
