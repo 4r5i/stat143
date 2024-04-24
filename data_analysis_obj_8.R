@@ -35,6 +35,12 @@ plot(agnes_single_euc, which.plots = 2)
 agnes_comp_euc <- cluster::agnes(x = df_cluster, metric = "euclidean", diss = F, method = "complete") 
 plot(agnes_comp_euc, which.plots = 2)
 
+fviz_silhouette(silhouette(cutree(tree = agnes_comp_euc, k = 7), 
+                           daisy(x = df_cluster, 
+                                 metric = "euclidean", 
+                                 stand = T)))
+
+
 # Euclidean Average Linkage
 agnes_avg_euc <- cluster::agnes(x = df_cluster, metric = "euclidean", diss = F, method = "average") 
 plot(agnes_avg_euc, which.plots = 2)
@@ -43,12 +49,21 @@ plot(agnes_avg_euc, which.plots = 2)
 agnes_ward <- cluster::agnes(x = df_cluster, diss = F, method = "ward") 
 plot(agnes_ward, which.plots = 2)
 
+
 ward_clust7 <- cutree(tree = agnes_ward, k = 7) 
 table(ward_clust7)
 
 ward_clust3 <- cutree(tree = agnes_ward, k = 3) 
 table(ward_clust3)
 
+fviz_silhouette(silhouette(cutree(tree = agnes_ward, k = 7), 
+                           daisy(x = df_cluster, 
+                                 metric = "euclidean", 
+                                 stand = T)))
+fviz_silhouette(silhouette(cutree(tree = agnes_ward, k = 3), 
+                           daisy(x = df_cluster, 
+                                 metric = "euclidean", 
+                                 stand = T)))
 
 # Best Number of Clusters
 best_ch <- NbClust(data = scale(df_cluster),
@@ -224,8 +239,8 @@ tibble(eigenvalues = (prcomp$sdev)^2, PC = 1:7) %>%
 prcomp$rotation
 princomp$loadings
 
-# Clustering of PC of Attitude and Opinion Factorsz
-df_cluster_pc <- bind_cols(df_cluster, prcomp$x) %>% select(PC1, PC2, PC3, PC4, PC5)
+# Clustering of PC of Attitude and Opinion Factors
+df_cluster_pc <- bind_cols(df_cluster, prcomp$x) %>% select(PC1, PC2, PC3, PC4)
 
 agnes_ward_pc <- cluster::agnes(x = df_cluster_pc, diss = F, method = "ward") 
 plot(agnes_ward_pc, which.plots = 2)
@@ -245,7 +260,7 @@ table(kmeans_pc$cluster)
 
 # Silhouette Widths of K-Means solution, k = 4
 example_sil_pc <- silhouette(kmeans_pc$cluster, daisy(x = df_cluster_pc, metric = "euclidean", stand = T))
-cluster_sil3 <- df_cluster_pc %>%
+cluster_sil_pc <- df_cluster_pc %>%
   mutate(cluster = ward_clust_pc) %>% 
   mutate(
     clust = kmeans_pc$cluster,
@@ -261,15 +276,62 @@ fviz_silhouette(example_sil_pc)
 
 options(ggrepel.max.overlaps = Inf)
 df_cluster %>%
-  mutate(cluster = ward_clust7,
+  mutate(cluster = ward_clust_pc,
          q_code = df$q_code,
-         tag = ifelse(cluster %in% c(3), q_code, NA)
+         tag = ifelse(cluster %in% c(4), q_code, NA)
          ) %>%
   bind_cols(as_tibble(prcomp$x)) %>%
   ggplot(aes(x = PC1, y = PC2)) +
   geom_point(col = "firebrick") +
   ggrepel::geom_label_repel(aes(label = tag))
 
+df_cluster_pc1 <- df_cluster_pc %>% 
+  bind_cols(cluster = ward_clust_pc) %>% 
+  filter(cluster != 4)
+
+agnes_ward_pc1 <- cluster::agnes(x = df_cluster_pc1, diss = F, method = "ward") 
+plot(agnes_ward_pc1, which.plots = 2)
+
+ward_clust_pc1 <- cutree(tree = agnes_ward_pc1, k = 5) 
+table(ward_clust_pc1)
+
+init_centers_pc1 <- df_cluster_pc1 %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = ward_clust_pc1) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>%
+  select(-clust)
+
+kmeans_pc1 <- kmeans(x = scale(df_cluster_pc1), centers = init_centers_pc1)
+table(kmeans_pc1$cluster)
+
+# Silhouette Widths of K-Means solution, k = 4
+example_sil_pc1 <- silhouette(kmeans_pc1$cluster, daisy(x = df_cluster_pc1, metric = "euclidean", stand = T))
+cluster_sil_pc1 <- df_cluster_pc1 %>%
+  mutate(cluster = ward_clust_pc1) %>% 
+  mutate(
+    clust = kmeans_pc1$cluster,
+    silhouette = example_sil_pc1[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil_pc1)
+
+# Centers of K-Means Algorithm
+df_cluster_pc1 %>%
+  mutate_all(.funs = scale) %>%
+  mutate(kmeans = kmeans$cluster) %>%
+  group_by(kmeans) %>%
+  summarise_all(.funs = mean) %>%
+  pivot_longer(c(attitude_f1, attitude_f2, attitude_f3), names_to = "vars", values_to = "mean") %>%
+  mutate(tag = factor(mean < 0, labels = c("average and up", "below average"))) %>%
+  ggplot(aes(x = vars, y = mean)) +
+  geom_bar(aes(fill = tag), stat = "identity", position = "dodge") +
+  facet_wrap(. ~ kmeans) +
+  coord_flip() +
+  ylim(-2,2) +
+  ggthemes::theme_gdocs()
 
 ################################################################################
 ####################### Individual Cluster Analyses ############################
