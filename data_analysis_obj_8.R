@@ -1,6 +1,8 @@
 ## This is the Data Analysis for Objective 8 
 ## for Stat 143 Survey Operations Project
 
+#hi hehe 
+
 #install.packages("rstudioapi")
 library(rstudioapi)  
 library(readxl)
