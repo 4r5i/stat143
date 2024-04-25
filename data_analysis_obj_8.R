@@ -410,7 +410,7 @@ mahal_clust_att <- cutree(tree = agnes_ward_mahal_att, k = 5)
 fviz_silhouette(silhouette(mahal_clust_att, mahal_dist_att))
 
 # Visualizing Cluster 5
-View(df %>% mutate(cluster = mahal_clust_att) %>% filter(cluster == 5))
+# View(df %>% mutate(cluster = mahal_clust_att) %>% filter(cluster == 5))
 
 prcomp_att <- prcomp(df_cluster_att)
 options(ggrepel.max.overlaps = Inf)
@@ -464,6 +464,12 @@ df_cluster_att %>%
   coord_flip() +
   ylim(-2,2) +
   ggthemes::theme_gdocs()
+
+df_cluster_att %>%
+  mutate_all(.funs = scale) %>%
+  mutate(kmeans = kmeans_att$cluster) %>%
+  filter(kmeans == 1) %>% 
+  boxplot()
 
 ####################### Opinion Factors ############################
 df_cluster_opp <- df %>% select(opinion_f1, opinion_f2, opinion_f3, opinion_f4)
@@ -522,13 +528,37 @@ df_cluster_opp %>%
   ylim(-2,2) +
   ggthemes::theme_gdocs()
 
-# Using AGNES Gower Distance
-gower_dist_opp <- daisy(df_cluster_opp, metric = c("gower"), stand = T)
-agnes_ward_gower_opp <- cluster::agnes(gower_dist_opp, diss = T, method = "ward") 
-plot(agnes_ward_gower_opp, which.plots = 2)
+# Using AGNES Euclidean Distance
+euc_dist_opp <- daisy(df_cluster_opp, metric = c("euclidean"), stand = T)
+agnes_ward_euc_opp <- cluster::agnes(euc_dist_opp, diss = T, method = "ward") 
+plot(agnes_ward_euc_opp, which.plots = 2)
 
-gower_clust_opp <- cutree(tree = agnes_ward_gower_opp, k = 2)
-fviz_silhouette(silhouette(gower_clust_opp, gower_dist_opp))
+euc_clust_opp <- cutree(tree = agnes_ward_euc_opp, k = 3)
+fviz_silhouette(silhouette(euc_clust_opp, euc_dist_opp))
+
+
+# Initial centers from AGNES (Euclidean, Ward's Linkage) k = 3
+init_centers_opp <- df_cluster_opp %>%
+  mutate_all(.funs = scale) %>%
+  mutate(clust = euc_clust_opp) %>%
+  group_by(clust) %>%
+  summarise_all(.funs = mean) %>% select(-clust) 
+
+kmeans_opp <- kmeans(x = scale(df_cluster_opp), centers = init_centers_opp)
+table(kmeans_opp$cluster)
+
+# Silhouette Widths of K-Means solution, k = 2
+example_sil_opp <- silhouette(kmeans_opp$cluster, euc_dist_opp)
+cluster_sil_opp <- df_cluster %>%
+  mutate(cluster = euc_clust_opp) %>% 
+  mutate(
+    clust = kmeans_att$cluster,
+    silhouette = example_sil_att[,3]
+  ) %>% group_by(clust) %>% 
+  summarise_at(vars(silhouette), list(name = mean))
+
+# Visualizing Average Silhouette Widths per Cluster
+fviz_silhouette(example_sil_opp) # ave sil width = 0.38
 
 
 # Initial centers from AGNES (Gower, Ward's Linkage) k = 3
@@ -554,8 +584,6 @@ cluster_sil_att <- df_cluster %>%
 # Visualizing Average Silhouette Widths per Cluster
 fviz_silhouette(example_sil_opp) # ave sil width = 0.38
 
-
-
 ##################### Cluster Analysis of Attitude and Opinion Clusters ########
 
 df_att_opp <- data.frame(opinion = opp_cluster, attitude = att_cluster)
@@ -565,7 +593,7 @@ gower.dist <- daisy(df_att_opp, metric = c("gower"))
 agnes_ward_att_opp <- cluster::agnes(x = gower.dist, diss = T, method = "ward")
 plot(agnes_ward_att_opp, which.plots = 2)
 
-cluster <- cutree(tree = agnes_ward_att_opp, k = 4)
+cluster <- cutree(tree = agnes_ward_att_opp, k = 5)
 example_sil_att_opp <- silhouette(cluster, gower.dist)
 fviz_silhouette(example_sil_att_opp)
 
