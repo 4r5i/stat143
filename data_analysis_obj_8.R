@@ -602,5 +602,13 @@ final_cluster_solution <- df_cluster %>% mutate(q_code = df$q_code) %>%
                               mutate(attitude = df_att_opp$attitude, 
                                      opinion = df_att_opp$clust, 
                                      cluster = cluster)
+
+table(cluster)
 write.csv(final_cluster_solution, "final_cluster_solution.csv")
 
+
+##################### Demographic Profile ######################################
+demo <- df %>% select(q_code, age, sex, occ_status, income, 
+                      education, fam_w_jeep, w_driver_rel) %>% 
+  filter(!q_code %in% c(102, 104, 105)) %>% 
+  mutate(cluster = cluster) %>% select(-q_code)
