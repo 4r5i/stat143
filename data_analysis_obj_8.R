@@ -607,8 +607,43 @@ table(cluster)
 write.csv(final_cluster_solution, "final_cluster_solution.csv")
 
 
+
+final <- df %>% select(q_code, age, sex, occ_status, income, 
+              education, fam_w_jeep, w_driver_rel) %>% 
+  filter(!q_code %in% c(102, 104, 105)) %>% 
+  mutate(cluster = cluster)
+write.csv(final, "final_demog_cluster.csv")
+table(final$sex, final$cluster)
+
 ##################### Demographic Profile ######################################
-demo <- df %>% select(q_code, age, sex, occ_status, income, 
+View(df %>% select(q_code, age, sex, occ_status, income, 
+                   education, fam_w_jeep, w_driver_rel) %>% 
+       filter(!q_code %in% c(102, 104, 105)) %>% 
+       mutate(cluster = cluster) %>% select(-q_code) %>% group_by(cluster) %>% count(sex))
+
+View(df %>% select(q_code, age, sex, occ_status, income, 
+                   education, fam_w_jeep, w_driver_rel) %>% 
+       filter(!q_code %in% c(102, 104, 105)) %>% 
+       mutate(cluster = cluster) %>% select(-q_code) %>% group_by(cluster) %>% count(fam_w_jeep))
+
+View(df %>% select(q_code, age, sex, occ_status, income, 
                       education, fam_w_jeep, w_driver_rel) %>% 
   filter(!q_code %in% c(102, 104, 105)) %>% 
-  mutate(cluster = cluster) %>% select(-q_code)
+  mutate(cluster = cluster) %>% select(-q_code) %>% group_by(cluster) %>% count(occ_status))
+
+View(df %>% select(q_code, age, sex, occ_status, income, 
+                   education, fam_w_jeep, w_driver_rel) %>% 
+       filter(!q_code %in% c(102, 104, 105)) %>% 
+       mutate(cluster = cluster) %>% select(-q_code) %>% group_by(cluster) %>% count(w_driver_rel))
+
+View(df %>% select(q_code, age, sex, occ_status, income, 
+                   education, fam_w_jeep, w_driver_rel) %>% 
+       filter(!q_code %in% c(102, 104, 105)) %>% 
+       mutate(cluster = cluster) %>% select(-q_code) %>% group_by(cluster) %>% count(education))
+
+View(df %>% select(q_code, age, sex, occ_status, income, 
+                   education, fam_w_jeep, w_driver_rel) %>% 
+       filter(!q_code %in% c(102, 104, 105)) %>% 
+       mutate(cluster = cluster) %>% select(-q_code) %>% group_by(cluster) %>% count(income))
+
+     
