@@ -107,7 +107,7 @@ df_cluster %>%
   geom_point(col = "firebrick") +
   ggrepel::geom_label_repel(aes(label = tag))
 
-# Removing Cluster 5
+# Removing Cluster 4
 df_cluster_att <- df_cluster_att %>% 
   mutate(clust = mahal_clust_att) %>% 
   filter(clust != 4) %>% 
@@ -118,6 +118,28 @@ mahal_dist_att <- mahal(df_cluster_att)
 agnes_ward_mahal_att <- cluster::agnes(mahal_dist_att, diss = T, 
                                        stand = T, method = "ward") 
 plot(agnes_ward_mahal_att, which.plots = 2)
+
+NbClust(data = df_cluster_att, 
+        diss = mahal_dist_att,
+        distance = NULL,
+        min.nc = 2, 
+        max.nc = 15, 
+        method = "ward.D", 
+        index = "all")
+
+#* Among all indices:                                                
+#* 5 proposed 2 as the best number of clusters 
+#* 4 proposed 3 as the best number of clusters 
+#* 2 proposed 4 as the best number of clusters 
+#* 2 proposed 6 as the best number of clusters 
+#* 2 proposed 7 as the best number of clusters 
+#* 3 proposed 8 as the best number of clusters 
+#* 1 proposed 9 as the best number of clusters 
+#* 1 proposed 10 as the best number of clusters 
+#* 1 proposed 11 as the best number of clusters 
+#* 1 proposed 14 as the best number of clusters 
+#* 1 proposed 15 as the best number of clusters 
+#* According to the majority rule, the best number of clusters is  2 
 
 # Using 3 clusters
 mahal_clust_att <- cutree(tree = agnes_ward_mahal_att, k = 3)
@@ -314,7 +336,7 @@ final <- df %>% select(q_code, age, sex, occ_status, income,
 table(final$cluster, final$attitude)
 table(final$cluster, final$opinion)
 
-write.csv(final, "final_demog_cluster.csv")
+# write.csv(final, "final_demog_cluster.csv")
 
 ##################### Demographic Profile ######################################
 # Recoding of the Sociodemographic Variables
