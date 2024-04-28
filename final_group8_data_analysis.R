@@ -11,6 +11,7 @@ library(NbClust)
 library(ggplot2)
 library(factoextra)
 library(ggplot2)
+library(data.table)
 
 
 ################################################################################
@@ -363,87 +364,35 @@ table(final$cluster, final$age_group)
 # Stacked Bar Chart
 final$age_group <- factor(final$age_group, levels = c("4","3","2","1","0"))
 colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500")
-ggplot(final, aes(x = cluster, fill = age_group, group = age_group)) +
+ggplot((final %>% rename(category = age_group)), aes(x = cluster, fill = category, group = category)) +
   geom_bar(position = "stack") +
   labs(title = "Stacked Bar Plot of Clusters by Age Group",
        x = "Cluster", y = "Count") +
   scale_fill_manual(values = colors,labels = c("Silent Generation/Baby Boomers", "Gen X", "Millennials","Gen Z"))
 
 
-# Distribution of Educational Attainment
-table(final$cluster, final$educ_group)
-
-# Stacked Bar Chart
-final$educ_group <- factor(final$educ_group, levels = c("1","2","3","4","5"))
-colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500")
-ggplot(final, aes(x = cluster, fill = educ_group, group = educ_group)) +
-  geom_bar(position = "stack") +
-  labs(title = "Stacked Bar Plot of Clusters by Highest Educational Attainment",
-       x = "Cluster", y = "Count") +
-  scale_fill_manual(values = colors,labels = c("Not A high school graduate",
-                                               "High School Graduate",
-                                               "College Level",
-                                               "College Graduate",
-                                               "Others"))
-
-# Distribution of Income Group
-table(final$cluster, final$income_group)
-
-# Stacked Bar Chart
-final$income_group <- factor(final$income_group, levels = c("0", "1", "2", "3", "4","5","6"))
-colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500","#008080")
-ggplot(final, aes(x = cluster, fill = income_group, group = income_group)) +
-  geom_bar(position = "stack") +
-  labs(title = "Stacked Bar Plot of Clusters by Income Group",
-       x = "Cluster", y = "Count") +
-  scale_fill_manual(values = colors,labels = c("Don't Know/Refused to Answer",
-                                               "Not Applicable",
-                                               "Less than Php 10,000", 
-                                               "Php 10,000 - Php 19,999", 
-                                               "Php 20,000 - Php 39,999", 
-                                               "Php 40,000 - Php 69,999",
-                                               "Greater than Php 70,000"))
-
-
-# Distribution of Occupational Status
-table(final$cluster, final$occ_group)
-
-# Stacked Bar Chart
-final$occ_group <- factor(final$occ_group, levels = c("1", "2", "3", "4","5"))
-colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500")
-ggplot(final, aes(x = cluster, fill = occ_group, group = occ_group)) +
-  geom_bar(position = "stack") +
-  labs(title = "Stacked Bar Plot of Clusters by Occupational Status",
-       x = "Cluster", y = "Count") +
-  scale_fill_manual(values = colors,labels = c("Employed", 
-                                               "Self-Employed", 
-                                               "Unemployed", 
-                                               "Student/Working Student",
-                                               "Retired"))
-
 # Distribution of Sex
 table(final$cluster, final$sex)
-
+final$sex <- factor(final$sex)
 tally <- final %>% select(cluster, sex) %>% 
-                  group_by(cluster, sex) %>% 
-                  tally() %>% ungroup()
-
-library(data.table)
+  group_by(cluster, sex) %>% 
+  tally() %>% ungroup()
 tally <- data.table(
   cluster = tally$cluster,
-  sex = tally$sex,
+  category = tally$sex,
   n = tally$n
 )
+
+# Stacked Bar Chart
 tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
-ggplot(aes(x = cluster, y = percentage, fill = sex)) +
+  ggplot(aes(x = cluster, y = percentage, fill = category)) +
   geom_bar(position = "stack", stat = "identity") +
   labs(title = "Stacked Bar Plot of Clusters by Sex",
        x = "Cluster", y = "Percentage") +
   scale_fill_manual(values = colors,labels = c("Female", 
                                                "Male")) +
-geom_text(aes(label = paste0(round(percentage,2),"%")), 
+  geom_text(aes(label = paste0(round(percentage,2),"%")), 
             position = position_stack(vjust = 0.5), size = 4)
-
 
 # Distribution of Respondents Familiar with Modern Jeepney
 table(final$cluster, final$fam_w_jeep)
@@ -455,11 +404,13 @@ tally <- final %>% select(cluster, fam_w_jeep) %>%
 
 tally <- data.table(
   cluster = tally$cluster,
-  fam_w_jeep = tally$fam_w_jeep,
+  category = tally$fam_w_jeep,
   n = tally$n
 )
+
+# Stacked Bar Chart
 tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
-  ggplot(aes(x = cluster, y = percentage, fill = fam_w_jeep)) +
+  ggplot(aes(x = cluster, y = percentage, fill = category)) +
   geom_bar(position = "stack", stat = "identity") +
   labs(title = "Stacked Bar Plot of Clusters by Familiarity with Modern Jeep",
        x = "Cluster", y = "Percentage") +
@@ -478,11 +429,13 @@ tally <- final %>% select(cluster, w_driver_rel) %>%
 
 tally <- data.table(
   cluster = tally$cluster,
-  w_driver_rel = tally$w_driver_rel,
+  category = tally$w_driver_rel,
   n = tally$n
 )
+
+# Stacked Bar Chart
 tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
-  ggplot(aes(x = cluster, y = percentage, fill = w_driver_rel)) +
+  ggplot(aes(x = cluster, y = percentage, fill = category)) +
   geom_bar(position = "stack", stat = "identity") +
   labs(title = "Stacked Bar Plot of Clusters by Having Jeepney Driver/Operator Relatives",
        x = "Cluster", y = "Percentage") +
@@ -491,4 +444,55 @@ tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
   geom_text(aes(label = paste0(round(percentage,2),"%")), 
             position = position_stack(vjust = 0.5), size = 4)
 
-##############################
+
+# Distribution of Occupational Status
+table(final$cluster, final$occ_group)
+
+# Stacked Bar Chart
+final$occ_group <- factor(final$occ_group, levels = c("1", "2", "3", "4","5"))
+colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500")
+ggplot((final %>% rename(category = occ_group)), aes(x = cluster, fill = category, group = category)) +
+  geom_bar(position = "stack") +
+  labs(title = "Stacked Bar Plot of Clusters by Occupational Status",
+       x = "Cluster", y = "Count") +
+  scale_fill_manual(values = colors,labels = c("Employed", 
+                                               "Self-Employed", 
+                                               "Unemployed", 
+                                               "Student/Working Student",
+                                               "Retired"))
+
+# Distribution of Educational Attainment
+table(final$cluster, final$educ_group)
+
+# Stacked Bar Chart
+final$educ_group <- factor(final$educ_group, levels = c("1","2","3","4","5"))
+colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500")
+ggplot((final %>% rename(category = educ_group)), aes(x = cluster, fill = category, group = category)) +
+  geom_bar(position = "stack") +
+  labs(title = "Stacked Bar Plot of Clusters by Highest Educational Attainment",
+       x = "Cluster", y = "Count") +
+  scale_fill_manual(values = colors,labels = c("Not A high school graduate",
+                                               "High School Graduate",
+                                               "College Level",
+                                               "College Graduate",
+                                               "Others"))
+
+# Distribution of Income Group
+table(final$cluster, final$income_group)
+
+# Stacked Bar Chart
+final$income_group <- factor(final$income_group, levels = c("0", "1", "2", "3", "4","5","6"))
+colors <- c("#800080","#DC143C","#FFD700","#1F497D","green","#FF4500","#008080")
+ggplot((final %>% rename(category = income_group)), aes(x = cluster, fill = category, group = category)) +
+  geom_bar(position = "stack") +
+  labs(title = "Stacked Bar Plot of Clusters by Income Group",
+       x = "Cluster", y = "Count") +
+  scale_fill_manual(values = colors,labels = c("Don't Know/Refused to Answer",
+                                               "Not Applicable",
+                                               "Less than Php 10,000", 
+                                               "Php 10,000 - Php 19,999", 
+                                               "Php 20,000 - Php 39,999", 
+                                               "Php 40,000 - Php 69,999",
+                                               "Greater than Php 70,000"))
+
+######################################################################################
