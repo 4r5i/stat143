@@ -511,7 +511,12 @@ fviz_silhouette(example_sil_opp) # ave sil width = 0.33
 opp_cluster <- df_cluster_opp %>% 
   mutate(clust = kmeans_opp$cluster,
          q_code = df$q_code) %>% 
-  filter(!q_code %in% c(102, 104, 105)) %>% select(clust)
+  filter(!q_code %in% c(102, 104, 105)) %>% 
+  mutate(cluster = ifelse(clust %in% c(3), 2, 
+                          ifelse(clust %in% c(2), 3,
+                                 ifelse(clust %in% c(5), 4,
+                                      ifelse(clust %in% c(4), 5, 1))))) %>% 
+  select(cluster)
 
 # Centers of K-Means Algorithm
 df_cluster_opp %>%
