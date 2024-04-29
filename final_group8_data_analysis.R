@@ -188,6 +188,16 @@ df_cluster_att %>%
   ylim(-2,2) +
   ggthemes::theme_gdocs()
 
+# Comparison og Factor Score Distribution
+att_comparison <- df_cluster_att %>% mutate(grouping = kmeans_att$cluster) %>% 
+                          rbind(df_cluster_att %>% 
+                                  mutate(grouping = 4)) %>% 
+                          gather(key = "factor", value = "factor_score", 1:3) 
+att_comparison$grouping <- factor(att_comparison$grouping, labels = c("1", "2", "3", "Overall"))
+ggplot(att_comparison, aes(x = grouping, y = factor_score))+
+  geom_boxplot()+
+  facet_wrap(~factor)
+
 ####################### Opinion Factors ############################
 df_cluster_opp <- df %>% select(opinion_f1, opinion_f2, opinion_f3, opinion_f4)
 
@@ -274,6 +284,15 @@ opp_cluster <- df_cluster_opp %>%
          q_code = df$q_code) %>% 
   filter(!q_code %in% c(102, 104, 105)) %>% select(clust) %>% 
   unlist() %>% as.numeric()
+
+op_comparison <- df_cluster_opp %>% mutate(grouping = kmeans_opp$cluster) %>% 
+  rbind(df_cluster_opp %>% 
+          mutate(grouping = 6)) %>% 
+  gather(key = "factor", value = "factor_score", 1:4) 
+op_comparison$grouping <- factor(op_comparison$grouping, labels = c("1", "2", "3", "4", "5", "Overall"))
+ggplot(op_comparison, aes(x = grouping, y = factor_score))+
+  geom_boxplot()+
+  facet_wrap(~factor)
 
 ##################### Cluster Analysis of Attitude and Opinion Clusters ########
 df_att_opp <- data.frame(opinion = factor(opp_cluster), attitude = factor(att_cluster))
