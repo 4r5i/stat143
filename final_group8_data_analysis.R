@@ -146,6 +146,11 @@ NbClust(data = df_cluster_att,
 mahal_clust_att <- cutree(tree = agnes_ward_mahal_att, k = 3)
 fviz_silhouette(silhouette(mahal_clust_att, mahal_dist_att))
 
+# Number of negative silhoutte width mahal_clust solution
+data_no_outliers1 <-  data_sil %>% filter(silhouette < 0)
+(table(data_no_outliers1$clust))
+sum((table(data_no_outliers1$clust)))
+
 # Initial centers from AGNES (Mahalanobis, Ward's Linkage) k = 3
 init_centers_att <- df_cluster_att %>%
   mutate_all(.funs = scale) %>%
@@ -160,6 +165,17 @@ att_cluster <- kmeans_att$cluster
 
 # Silhouette Widths of K-Means solution, k = 3
 example_sil_att <- silhouette(kmeans_att$cluster, mahal_dist_att)
+
+# Number of negative silhoutte width K-Means solution
+sil2 <- silhouette(kmeans_att$cluster, mahal_dist_att)
+head(sil2) # first 6 rows
+data_sil2 <- df_cluster_att %>%
+  mutate(
+    clust = kmeans_att$cluster, silhouette = sil2[,3]
+  )
+data_no_outliers2 <-  data_sil2 %>% filter(silhouette < 0)
+(table(data_no_outliers2$clust))
+sum((table(data_no_outliers2$clust)))
 
 # Observations per cluster with negative silhouette
 df_cluster_att %>%
@@ -198,6 +214,12 @@ ggplot(att_comparison, aes(x = grouping, y = factor_score))+
   geom_boxplot()+
   facet_wrap(~factor)
 
+#Comparison of 2 grouping solutions for attitude using CH and avg_sil width
+kmeans_stats <- fpc::cluster.stats(d = mahal_dist_att, clustering =kmeans_att$cluster )
+hclust_stats <- fpc::cluster.stats(d = mahal_dist_att, clustering = mahal_clust_att)
+c("kmeans" = kmeans_stats$avg.silwidth, "hclust" = hclust_stats$avg.silwidth)
+c("kmeans" = kmeans_stats$ch, "hclust" = hclust_stats$ch)
+
 ####################### Opinion Factors ############################
 df_cluster_opp <- df %>% select(opinion_f1, opinion_f2, opinion_f3, opinion_f4)
 
@@ -235,6 +257,17 @@ mahal_clust_opp <- cutree(tree = agnes_ward_mahal_opp, k = 5)
 
 # Silhouette Width
 fviz_silhouette(silhouette(mahal_clust_opp, mahal_dist_opp))
+# Number of silhouette width mahal-ward solution for opinion
+sil3 <- silhouette(mahal_clust_opp, mahal_dist_att)
+head(sil3) # first 6 rows
+data_sil3 <- df_cluster_opp %>%
+  mutate(
+    clust = mahal_clust_opp, silhouette = sil[,3]
+  )
+data_no_outliers3 <-  data_sil3 %>% filter(silhouette < 0)
+(table(data_no_outliers3$clust))
+sum((table(data_no_outliers3$clust)))
+
 
 # Initial centers from AGNES (Mahalanobis, Ward's Linkage) k = 5
 init_centers_opp <- df_cluster_opp %>%
@@ -293,6 +326,24 @@ op_comparison$grouping <- factor(op_comparison$grouping, labels = c("1", "2", "3
 ggplot(op_comparison, aes(x = grouping, y = factor_score))+
   geom_boxplot()+
   facet_wrap(~factor)
+
+#number of negative silhouette width for kmeans solution of opinion
+sil4 <- silhouette(kmeans_opp$cluster, mahal_dist_att)
+head(sil4) # first 6 rows
+data_sil4 <- df_cluster_att %>%
+  mutate(
+    clust = kmeans_opp$cluster, silhouette = sil2[,3]
+  )
+data_no_outliers4 <-  data_sil4 %>% filter(silhouette < 0)
+(table(data_no_outliers4$clust))
+sum((table(data_no_outliers4$clust)))
+
+#Comparison of the two solutions for opinion solution using CH and avergage silhouette width
+kmeans_opp_stats <- fpc::cluster.stats(d = mahal_dist_opp, clustering =kmeans_opp$cluster )
+hclust_opp_stats <- fpc::cluster.stats(d = mahal_dist_opp, clustering = mahal_clust_opp)
+c("kmeans" = kmeans_opp_stats$avg.silwidth, "hclust" = hclust_opp_stats$avg.silwidth)
+c("kmeans" = kmeans_opp_stats$ch, "hclust" = hclust_opp_stats$ch)
+
 
 ##################### Cluster Analysis of Attitude and Opinion Clusters ########
 df_att_opp <- data.frame(opinion = factor(opp_cluster), attitude = factor(att_cluster))
