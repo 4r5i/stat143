@@ -565,10 +565,75 @@ ggplot((final %>% rename(category = income_group)), aes(x = cluster, fill = cate
                                                "Php 40,000 - Php 69,999",
                                                "Greater than Php 70,000"))
 
-# Stacked Bar Chart of Income Group with Percentage
+
+#Occupational Status
+table(final$cluster, final$occ_group)
+
+final$occ_group <- factor(final$occ_group)
+tally <- final %>% select(cluster, occ_group) %>% 
+  group_by(cluster, occ_group) %>% 
+  tally() %>% ungroup()
+
+tally <- data.table(
+  cluster = tally$cluster,
+  category = tally$occ_group,
+  n = tally$n
+)
+
+# Stacked Bar Charts with Percentage Values
+
+# Educational Attainment
+final$educ_group <- factor(final$educ_group)
+tally <- final %>% select(cluster, educ_group) %>% 
+  group_by(cluster, educ_group) %>% 
+  tally() %>% ungroup()
+
+tally <- data.table(
+  cluster = tally$cluster,
+  category = tally$educ_group,
+  n = tally$n
+)
+
+# Stacked
+tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
+  ggplot(aes(x = cluster, y = percentage, fill = category)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(title = "Stacked Bar Plot of Clusters by Education Group",
+       x = "Cluster", y = "Percentage") +
+  scale_fill_manual(values = colors,labels = c("Not a High School Graduate", 
+                                               "High School Graduate","College Level",
+                                               "College Graduate","Others")) +
+  geom_text(aes(label = paste0(round(percentage,2),"%")), 
+            position = position_stack(vjust = 0.5), size = 4)
+
+# Age Group
+final$age_group <- factor(final$age_group)
+tally <- final %>% select(cluster, age_group) %>% 
+  group_by(cluster, age_group) %>% 
+  tally() %>% ungroup()
+
+tally <- data.table(
+  cluster = tally$cluster,
+  category = tally$age_group,
+  n = tally$n
+)
+
+# Stacked
+tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
+  ggplot(aes(x = cluster, y = percentage, fill = category)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(title = "Stacked Bar Plot of Clusters by Age Group",
+       x = "Cluster", y = "Percentage") +
+  scale_fill_manual(values = colors,labels = c("Silent Generation/Baby Boomers", 
+                                               "Gen X","Millennials",
+                                               "Gen Z")) +
+  geom_text(aes(label = paste0(round(percentage,2),"%")), 
+            position = position_stack(vjust = 0.5), size = 4)
+
+#Income Group
+final$income_group <- factor(final$income_group)
 tally <- final %>% select(cluster, income_group) %>% 
-  group_by(cluster, income_group
-           ) %>% 
+  group_by(cluster, income_group) %>% 
   tally() %>% ungroup()
 
 tally <- data.table(
@@ -576,17 +641,16 @@ tally <- data.table(
   category = tally$income_group,
   n = tally$n
 )
+
+# Stacked
 tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
   ggplot(aes(x = cluster, y = percentage, fill = category)) +
   geom_bar(position = "stack", stat = "identity") +
   labs(title = "Stacked Bar Plot of Clusters by Income Group",
        x = "Cluster", y = "Percentage") +
-  scale_fill_manual(values = colors,labels = c("Don't Know/Refused to Answer",
-                                               "Not Applicable",
-                                               "Less than Php 10,000", 
-                                               "Php 10,000 - Php 19,999", 
-                                               "Php 20,000 - Php 39,999", 
-                                               "Php 40,000 - Php 69,999",
+  scale_fill_manual(values = colors,labels = c("Don't Know/Refused to Answer","Not Applicable", 
+                                               "Less than Php 10,000","Php 10,000-Php 19,999",
+                                               "Php 20,000 - Php 39,999","Php 40,000 - Php 69,999",
                                                "Greater than Php 70,000")) +
   geom_text(aes(label = paste0(round(percentage,2),"%")), 
             position = position_stack(vjust = 0.5), size = 4)
