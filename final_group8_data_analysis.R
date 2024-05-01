@@ -258,7 +258,7 @@ mahal_clust_opp <- cutree(tree = agnes_ward_mahal_opp, k = 5)
 # Silhouette Width
 fviz_silhouette(silhouette(mahal_clust_opp, mahal_dist_opp))
 # Number of silhouette width mahal-ward solution for opinion
-sil3 <- silhouette(mahal_clust_opp, mahal_dist_att)
+sil3 <- silhouette(mahal_clust_opp, mahal_dist_opp)
 head(sil3) # first 6 rows
 data_sil3 <- df_cluster_opp %>%
   mutate(
@@ -564,5 +564,31 @@ ggplot((final %>% rename(category = income_group)), aes(x = cluster, fill = cate
                                                "Php 20,000 - Php 39,999", 
                                                "Php 40,000 - Php 69,999",
                                                "Greater than Php 70,000"))
+
+# Stacked Bar Chart of Income Group with Percentage
+tally <- final %>% select(cluster, income_group) %>% 
+  group_by(cluster, income_group
+           ) %>% 
+  tally() %>% ungroup()
+
+tally <- data.table(
+  cluster = tally$cluster,
+  category = tally$income_group,
+  n = tally$n
+)
+tally[, percentage := n / sum(n) * 100, by = cluster] %>% group_by(cluster) %>%
+  ggplot(aes(x = cluster, y = percentage, fill = category)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(title = "Stacked Bar Plot of Clusters by Income Group",
+       x = "Cluster", y = "Percentage") +
+  scale_fill_manual(values = colors,labels = c("Don't Know/Refused to Answer",
+                                               "Not Applicable",
+                                               "Less than Php 10,000", 
+                                               "Php 10,000 - Php 19,999", 
+                                               "Php 20,000 - Php 39,999", 
+                                               "Php 40,000 - Php 69,999",
+                                               "Greater than Php 70,000")) +
+  geom_text(aes(label = paste0(round(percentage,2),"%")), 
+            position = position_stack(vjust = 0.5), size = 4)
 
 ######################################################################################
